@@ -1,4 +1,5 @@
 # yashu-tools — 零依赖的截图 / 字体检查 / 表格转图工具箱
+n[![selftest](https://github.com/steelan9199/yashu-tools/actions/workflows/ci.yml/badge.svg)](https://github.com/steelan9199/yashu-tools/actions/workflows/ci.yml)
 
 **No puppeteer. No npm install. No Playwright.** Node built-ins (≥22) + your locally installed Chrome/Edge via CDP — that's the whole dependency tree.
 
