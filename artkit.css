@@ -1,0 +1,82 @@
+/* artkit.css — 剪纸夜海插画组件库（本工作室视觉母题，零依赖纯 CSS）
+   用法：页面 <link rel="stylesheet" href="artkit.css">，容器用 .yk-sky（夜）或 .yk-paper（纸），
+   元素全部绝对定位，坐标自己摆。样张见 artkit-demo.html。
+   字体铁律内建：只有 LXGW WenKai GB，字重只用 300/400/500。 */
+
+/* ---- 容器 ---- */
+.yk-sky, .yk-paper { position:relative; overflow:hidden; font-family:'LXGW WenKai GB'; }
+.yk-sky, .yk-paper, .yk-sky *, .yk-paper * { box-sizing:border-box; }
+.yk-sky   { background:linear-gradient(165deg,#0c1830 0%,#15264d 52%,#22396b 100%); color:#f5f0e6; }
+.yk-paper { background:#f4ede0; color:#3a2c18; }
+
+/* ---- 星星 ---- */
+.yk-star { position:absolute; width:3px; height:3px; border-radius:50%; background:#f2e9d8; opacity:.7; }
+.yk-star--dim { opacity:.35; }
+
+/* ---- 圆月（光晕随尺寸走，改大小用 --yk-moon-size）---- */
+.yk-moon { position:absolute; width:var(--yk-moon-size,150px); height:var(--yk-moon-size,150px);
+  border-radius:50%; background:#f2e9d8;
+  box-shadow:0 0 0 calc(var(--yk-moon-size,150px)*.147) rgba(242,233,216,.07),
+             0 0 0 calc(var(--yk-moon-size,150px)*.307) rgba(242,233,216,.035); }
+
+/* ---- 剪纸海（三层叠出层次，height/bottom/rotate 自己定）---- */
+.yk-sea { position:absolute; left:-40px; right:-40px; border-radius:50% 50% 0 0; }
+.yk-sea--1 { background:#2a4a7f; }
+.yk-sea--2 { background:#1f3863; }
+.yk-sea--3 { background:#15294e; }
+
+/* ---- 纸船提灯人（固定结构：<div class="yk-boat"><i></i><i></i><i></i><i></i><i></i></div>
+   锚点是水线；整体缩放用 transform:scale()，transform-origin:bottom center ---- */
+.yk-boat { position:absolute; width:0; height:0; }
+.yk-boat i { position:absolute; display:block; }
+.yk-boat i:nth-child(1) { bottom:52px; left:-19px; width:38px; height:38px; border-radius:50%;
+  background:radial-gradient(circle,rgba(255,217,122,.45) 0%,rgba(255,217,122,0) 70%); }
+.yk-boat i:nth-child(2) { bottom:0; left:-34px; width:68px; height:22px; background:#0e1f3d;
+  border-radius:0 0 10px 10px; clip-path:polygon(0 0,100% 0,82% 100%,18% 100%); }
+.yk-boat i:nth-child(3) { bottom:22px; left:-2px; width:4px; height:44px; background:#0e1f3d; }
+.yk-boat i:nth-child(4) { bottom:30px; left:2px; width:36px; height:34px; background:#e8b34b;
+  clip-path:polygon(0 0,100% 50%,0 100%); }
+.yk-boat i:nth-child(5) { bottom:64px; left:-7px; width:14px; height:18px; background:#ffd97a; border-radius:3px; }
+
+/* ---- 金色文件夹（结构：<div class="yk-folder"><span></span></div>）---- */
+.yk-folder { position:absolute; width:170px; height:112px; background:#e8b34b;
+  border-radius:8px; box-shadow:0 14px 0 #c99534; }
+.yk-folder::before { content:''; position:absolute; top:-16px; left:0; width:74px; height:20px;
+  background:#e8b34b; border-radius:6px 6px 0 0; }
+.yk-folder span { position:absolute; left:16px; right:16px; top:26px; height:12px; background:#f7e6bd;
+  border-radius:3px; box-shadow:0 22px 0 #f7e6bd, 0 44px 0 #f7e6bd; opacity:.85; }
+
+/* ---- 深蓝铭牌（行条自己摆：<div class="yk-tablet"><b class="l" style="top..width.."></b>…</div>）---- */
+.yk-tablet { position:absolute; width:250px; height:158px; background:#132748; border:3px solid #e8b34b;
+  border-radius:12px; box-shadow:0 16px 0 rgba(0,0,0,.25); }
+.yk-tablet .l { position:absolute; left:26px; right:26px; height:10px; background:#f5f0e6; border-radius:4px; opacity:.75; }
+
+/* ---- 印章（文字写在元素里）---- */
+.yk-seal { position:absolute; width:84px; height:84px; border-radius:50%; background:#c0392b; color:#f7e6bd;
+  display:flex; align-items:center; justify-content:center; font-size:26px; letter-spacing:4px; padding-left:4px;
+  border:3px solid #f7e6bd; box-shadow:0 6px 0 rgba(0,0,0,.3); font-weight:500; }
+
+/* ---- 边框标签（夜空用默认金色，纸面加 --ink）---- */
+.yk-tag { display:inline-block; font-size:20px; letter-spacing:8px; color:#e8b34b; border:1px solid #e8b34b;
+  padding:4px 16px 4px 24px; border-radius:3px; font-weight:400; }
+.yk-tag--ink { color:#8a5a1e; border-color:#b8863b; }
+
+/* ---- 单据卡（纸面世界；行条 <b class="l" style="width:..%"></b>）---- */
+.yk-doc { position:absolute; width:120px; height:150px; background:#fff; border:2px solid #d8c9a8;
+  border-radius:10px; box-shadow:0 8px 0 rgba(58,44,24,.12); padding:14px 12px; }
+.yk-doc .l { display:block; height:8px; background:#e4d9c0; border-radius:3px; margin-bottom:9px; }
+.yk-doc--pass { border-color:#3f7d4e; }
+.yk-doc--fail { border-color:#b3472f; }
+
+/* ---- 过/留 圆章（盖在 .yk-doc 右下角）---- */
+.yk-stamp { position:absolute; right:-10px; bottom:-10px; width:52px; height:52px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center; font-size:17px; letter-spacing:2px; padding-left:2px;
+  color:#fffaf0; border:2px solid #fffaf0; font-weight:500; }
+.yk-doc--pass .yk-stamp { background:#3f7d4e; }
+.yk-doc--fail .yk-stamp { background:#b3472f; }
+
+/* ---- 文字（颜色随容器）---- */
+.yk-text { position:absolute; }
+.yk-title { margin:0; font-size:52px; font-weight:500; letter-spacing:3px; line-height:1.35; }
+.yk-sub   { margin:0; font-size:22px; font-weight:300; letter-spacing:2px; opacity:.8; }
+.yk-note  { margin:0; font-size:19px; font-weight:300; letter-spacing:2px; white-space:nowrap; }

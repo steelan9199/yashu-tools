@@ -1,0 +1,5 @@
+# generated artifacts
+test/out*
+test/*.png
+test/*_表格转图.md
+*.log

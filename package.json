@@ -1,0 +1,18 @@
+{
+  "name": "yashu-tools",
+  "version": "1.0.0",
+  "description": "Zero-dependency toolbox: headless screenshots, HTML/CSS/MD font lint, Markdown table→image, article preflight, GIF from CSS animation — Node built-ins + your local Chrome/Edge only.",
+  "license": "MIT",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "test": "bash selftest.sh"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitee.com/yashujs/yashu-tools.git"
+  },
+  "keywords": [
+    "screenshot", "cdp", "headless", "markdown", "font-lint",
+    "gif", "zero-dependency", "wechat", "mdtables"
+  ]
+}
