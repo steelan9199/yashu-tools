@@ -6,7 +6,11 @@ DIR="$(cd "$(dirname "$0")" && pwd)"
 fail=0
 
 echo "== fontcheck =="
-bash "$DIR/fontcheck.sh" || fail=1
+# 字体在机检查是 Windows 注册表逻辑，CI 的 Linux 跑不了——按平台守卫，CI 靠渲染兜底
+case "$(uname -s)" in
+  CYGWIN*|MINGW*|MSYS*) bash "$DIR/fontcheck.sh" || fail=1 ;;
+  *) echo "OK fontcheck 跳过（非 Windows 平台）" ;;
+esac
 
 echo "== webshot =="
 node "$DIR/webshot.js" "$DIR/test/sample.html" -o "$DIR/test/out.png" --scale 2 --font || fail=1
