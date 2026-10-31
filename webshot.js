@@ -85,8 +85,12 @@ async function launchBrowser() {
   return {
     port,
     close() {
-      // Windows 下直接 kill 杀不干净子进程，用 taskkill 连树一起拔
-      if (proc.pid) spawnSync('taskkill', ['/PID', String(proc.pid), '/T', '/F'], { stdio: 'ignore' });
+      // Windows 下直接 kill 杀不干净子进程，用 taskkill 连树一起拔；POSIX 直接 SIGKILL
+      if (process.platform === 'win32') {
+        if (proc.pid) spawnSync('taskkill', ['/PID', String(proc.pid), '/T', '/F'], { stdio: 'ignore' });
+      } else {
+        try { proc.kill('SIGKILL'); } catch (_) { /* 已退出就算了 */ }
+      }
       try { fs.rmSync(profileDir, { recursive: true, force: true }); } catch (_) { /* 临时目录，删不掉就算了 */ }
     },
   };

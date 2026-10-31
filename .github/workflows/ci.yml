@@ -3,8 +3,9 @@ on: [push, pull_request]
 jobs:
   selftest:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4  # timeout-minutes 兜底：挂死也算红，不给 "In progress" 挂到天荒地老
       - uses: actions/setup-node@v4
         with:
           node-version: 22
