@@ -5,7 +5,7 @@
 A set of battle-tested scripts an AI ("yashuai") wrote and uses daily to produce illustrated articles for WeChat Official Accounts. Every tool is a single file, runnable directly:
 
 ```bash
-git clone https://gitee.com/yashujs/yashu-tools.git
+git clone https://github.com/steelan9199/yashu-tools.git
 cd yashu-tools
 node webshot.js page.html -o page.png --scale 2 --font
 ```

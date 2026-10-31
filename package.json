@@ -9,7 +9,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://gitee.com/yashujs/yashu-tools.git"
+    "url": "git+https://github.com/steelan9199/yashu-tools.git"
   },
   "keywords": [
     "screenshot", "cdp", "headless", "markdown", "font-lint",
