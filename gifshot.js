@@ -6,11 +6,15 @@
  * 用法:
  *   node gifshot.js <input.html> -o out.gif [--frames 24] [--duration 3000]
  *                   [--width 512] [--scale 1] [--selector css] [--font] [--loop 0]
- * 也作库用: const { gifshot } = require('./gifshot')
+ * 多场景（分镜合成一条 GIF，硬切拼接，每幅图挂局部色表——不裸拼字节）:
+ *   node gifshot.js s1.html s2.html ... -o out.gif [--fps 10] [--durations 10000,10000,...]
+ * 也作库用: const { gifshot } = require('./gifshot')  // opts.urls = [url, ...] 走多场景
  *
  * 契约：页面里要有 CSS animation（getAnimations 能拿到的）；--duration 秒数
  * 最好取各动画时长的公倍数，不然循环处会跳一下。动画按 currentTime 整体冻结
  * 到时间点 t 再截，所以 every frame 都是确定性的，不靠录屏。
+ * 多场景时每帧延时恒定 = round(100/fps) 厘秒，各场景时长不必互相公倍，
+ * 但各场景内部的动画时长要能整除本场景时长，循环才无缝。
  */
 const fs = require('fs');
 const path = require('path');
@@ -207,38 +211,64 @@ function subBlocks(data) {
 }
 
 // ---------- GIF89a 组装 ----------
-function encodeGif(frames /* [{w,h,indices}] */, palette, delayCs, loop) {
-  const bits = Math.max(2, Math.ceil(Math.log2(Math.max(2, palette.length))));
-  const tableSize = 1 << bits;
+// palette 传 null 时走局部色表模式：每帧自带 f.palette，各图挂各的表（多场景分镜用）。
+function encodeGif(frames /* [{w,h,indices,palette?}] */, palette, delayCs, loop) {
+  const local = !palette; // 无全局表 → 每帧挂自己的局部表
+  const bitsOf = (pal) => Math.max(2, Math.ceil(Math.log2(Math.max(2, pal.length))));
+  const colorTable = (pal, bits) => {
+    const t = Buffer.alloc((1 << bits) * 3);
+    pal.forEach((k, i) => { t[i * 3] = (k >> 16) & 255; t[i * 3 + 1] = (k >> 8) & 255; t[i * 3 + 2] = k & 255; });
+    return t;
+  };
+  const bits0 = local ? 0 : bitsOf(palette);
   const head = Buffer.concat([
     Buffer.from('GIF89a', 'ascii'),
     Buffer.from([frames[0].w & 255, frames[0].w >> 8, frames[0].h & 255, frames[0].h >> 8]),
-    Buffer.from([0x80 | ((bits - 1) & 7), 0, 0]), // GCT 有，色深 bits，无排序
+    local ? Buffer.from([0, 0, 0]) : Buffer.from([0x80 | ((bits0 - 1) & 7), 0, 0]), // GCT 有，色深 bits，无排序
   ]);
-  const gct = Buffer.alloc(tableSize * 3);
-  palette.forEach((k, i) => { gct[i * 3] = (k >> 16) & 255; gct[i * 3 + 1] = (k >> 8) & 255; gct[i * 3 + 2] = k & 255; });
+  const gct = local ? Buffer.alloc(0) : colorTable(palette, bits0);
   const loopExt = Buffer.from([0x21, 0xff, 0x0b, ...Buffer.from('NETSCAPE2.0', 'ascii'), 3, 1, loop & 255, (loop >> 8) & 255, 0]);
   const gce = Buffer.from([0x21, 0xf9, 4, 0x04, delayCs & 255, (delayCs >> 8) & 255, 0, 0]); // disposal=1，无透明
-  const body = frames.map((f) => Buffer.concat([
-    gce,
-    Buffer.from([0x2c, 0, 0, 0, 0, f.w & 255, f.w >> 8, f.h & 255, f.h >> 8, 0]),
-    Buffer.from([Math.max(2, bits)]), // LZW 最小码长
-    subBlocks(lzwEncode(f.indices, Math.max(2, bits))),
-  ]));
+  const body = frames.map((f) => {
+    const pal = local ? f.palette : palette;
+    const bits = local ? bitsOf(pal) : bits0;
+    const packed = local ? 0x80 | ((bits - 1) & 7) : 0; // 图像描述符：局部色表标志位
+    return Buffer.concat([
+      gce,
+      Buffer.from([0x2c, 0, 0, 0, 0, f.w & 255, f.w >> 8, f.h & 255, f.h >> 8, packed]),
+      local ? colorTable(pal, bits) : Buffer.alloc(0),
+      Buffer.from([Math.max(2, bits)]), // LZW 最小码长
+      subBlocks(lzwEncode(f.indices, Math.max(2, bits))),
+    ]);
+  });
   return Buffer.concat([head, gct, loopExt, ...body, Buffer.from([0x3b])]);
 }
 
 // ---------- 主流程 ----------
 /**
- * 在已启动的浏览器上把一个 CSS 动画页面截成 GIF。
- * opts: { url, out, width=512, scale=1, frames=24, duration=3000, selector=null, fontCss=null, loop=0, extraWait=0 }
+ * 在已启动的浏览器上把一个（或多场景分镜）CSS 动画页面截成 GIF。
+ * opts: { url | urls[], out, width=512, scale=1, frames=24, duration=3000,
+ *         fps=10, durations[], selector=null, fontCss=null, loop=0, extraWait=0 }
+ * 多场景（urls.length>1）：按 fps 定帧数与延时，各场景挂局部色表硬切拼接；
+ * 场景间裁剪框尺寸必须一致（否则 GIF 没法编）。
  */
 async function gifshot(browser, opts) {
-  const { url, out } = opts;
+  const urls = opts.urls && opts.urls.length ? opts.urls : [opts.url];
+  if (!urls.length || !urls[0]) throw new Error('没有输入页（url 或 urls）');
+  const { out } = opts;
   const width = opts.width || 512;
   const scale = opts.scale || 1;
-  const frames = Math.max(2, Number(opts.frames) || 24);
-  const duration = Math.max(100, Number(opts.duration) || 3000);
+  const multi = urls.length > 1;
+  const frames0 = Math.max(2, Number(opts.frames) || 24);
+  const duration0 = Math.max(100, Number(opts.duration) || 3000);
+  const fps = Math.max(1, Number(opts.fps) || 10);
+  // 多场景时长表：opts.durations 逐个给，或单个数全场通用；缺省每场 10s
+  const durations = multi
+    ? (opts.durations && opts.durations.length
+        ? (opts.durations.length === 1 ? urls.map(() => opts.durations[0]) : opts.durations)
+        : urls.map(() => 10000))
+    : [duration0];
+  if (durations.length !== urls.length) throw new Error(`durations 数量(${durations.length})和场景数(${urls.length})不一致`);
 
   const target = await (await fetch(`http://127.0.0.1:${browser.port}/json/new?about:blank`, { method: 'PUT' })).json();
   if (typeof WebSocket !== 'function') throw new Error('本 Node 没有 WebSocket 全局（需 ≥22），零依赖路线走不通');
@@ -263,59 +293,79 @@ async function gifshot(browser, opts) {
     await conn.send('Runtime.enable');
     if (opts.fontCss) await conn.send('Page.addScriptToEvaluateOnNewDocument', { source: `(()=>{const s=document.createElement('style');s.textContent=${JSON.stringify(opts.fontCss)};document.addEventListener('DOMContentLoaded',()=>document.head.appendChild(s));})();` });
     await conn.send('Emulation.setDeviceMetricsOverride', { width, height: width, deviceScaleFactor: scale, mobile: false });
-    await conn.send('Page.navigate', { url });
-    const deadline = Date.now() + 30000;
-    for (;;) {
-      await sleep(150);
-      const state = await evalJson(conn, 'document.readyState');
-      if (state === 'complete') break;
-      if (Date.now() > deadline) throw new Error('页面 30s 没加载完: ' + url);
+
+    // 逐场景：导航 → 等 → 量裁剪框 → 冻结截帧 → 解码 → 建调色板 → 索引化
+    const gifFrames = [];
+    let clipSize = null, lastPalette = null;
+    for (let s = 0; s < urls.length; s++) {
+      await conn.send('Page.navigate', { url: urls[s] });
+      const deadline = Date.now() + 30000;
+      for (;;) {
+        await sleep(150);
+        const state = await evalJson(conn, 'document.readyState');
+        if (state === 'complete') break;
+        if (Date.now() > deadline) throw new Error('页面 30s 没加载完: ' + urls[s]);
+      }
+      await evalJson(conn, 'document.fonts ? document.fonts.ready.then(() => true) : true');
+      if (opts.extraWait) await sleep(opts.extraWait);
+
+      const nAnim = await evalJson(conn, 'document.getAnimations({subtree:true}).length');
+      if (nAnim === 0) throw new Error('页面上没有 CSS 动画（getAnimations 返回 0），gifshot 只管动画页: ' + urls[s]);
+
+      // 裁剪框：选择器联合包围盒，或整页
+      let clip;
+      if (opts.selector) {
+        clip = await evalJson(conn, `(() => {
+          const els = [...document.querySelectorAll(${JSON.stringify(opts.selector)})];
+          if (els.length === 0) throw new Error('选择器没匹配到元素: ' + ${JSON.stringify(opts.selector)});
+          let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
+          for (const el of els) {
+            const r = el.getBoundingClientRect();
+            x1 = Math.min(x1, r.x); y1 = Math.min(y1, r.y + window.scrollY);
+            x2 = Math.max(x2, r.x + r.width); y2 = Math.max(y2, r.y + r.height + window.scrollY);
+          }
+          return { x: x1, y: y1, width: x2 - x1, height: y2 - y1 };
+        })()`);
+      } else {
+        clip = await evalJson(conn, `({ x: 0, y: 0, width: Math.ceil(document.documentElement.scrollWidth), height: Math.ceil(document.documentElement.scrollHeight) })`);
+      }
+      // scale 只走 Emulation 的 deviceScaleFactor；clip.scale 必须保持 1，否则两层缩放叠乘
+      clip = { x: 0, y: Math.max(0, Math.round(clip.y)), width: Math.ceil(clip.width), height: Math.ceil(clip.height), scale: 1 };
+      if (clipSize) {
+        if (clip.width !== clipSize.w || clip.height !== clipSize.h)
+          throw new Error(`场景 ${s + 1} 画幅 (${clip.width}x${clip.height}) 与场景 1 (${clipSize.w}x${clipSize.h}) 不一致，多场景要求同尺寸`);
+      } else clipSize = { w: clip.width, h: clip.height };
+
+      const frames = multi ? Math.max(2, Math.round((durations[s] * fps) / 1000)) : frames0;
+      const duration = durations[s];
+
+      // 逐帧：所有动画整体冻结到 t 再截——确定性输出，重跑同参必得同图
+      const pngs = [];
+      for (let i = 0; i < frames; i++) {
+        const t = Math.round((i * duration) / frames);
+        await evalJson(conn, `document.getAnimations({subtree:true}).forEach(a => { a.pause(); a.currentTime = ${t}; });`);
+        const shot = await conn.send('Page.captureScreenshot', { format: 'png', clip, captureBeyondViewport: true });
+        pngs.push(Buffer.from(shot.data, 'base64'));
+      }
+
+      const decoded = pngs.map(pngToRGB);
+      const w = decoded[0].w, h = decoded[0].h;
+      if (decoded.some((d) => d.w !== w || d.h !== h)) throw new Error('各帧尺寸不一致，动画里别改布局尺寸');
+      const allPixels = Buffer.concat(decoded.map((d) => d.rgb));
+      const palette = buildPalette(allPixels, 256); // GIF 色表上限 256 色
+      for (const d of decoded) gifFrames.push({ w, h, indices: quantize(d.rgb, palette), palette });
+      lastPalette = palette;
+      if (multi) console.error(`  场景 ${s + 1}/${urls.length}: ${frames} 帧, ${palette.length} 色`);
     }
-    await evalJson(conn, 'document.fonts ? document.fonts.ready.then(() => true) : true');
-    if (opts.extraWait) await sleep(opts.extraWait);
 
-    const nAnim = await evalJson(conn, 'document.getAnimations({subtree:true}).length');
-    if (nAnim === 0) throw new Error('页面上没有 CSS 动画（getAnimations 返回 0），gifshot 只管动画页');
-
-    // 裁剪框：选择器联合包围盒，或整页
-    let clip;
-    if (opts.selector) {
-      clip = await evalJson(conn, `(() => {
-        const els = [...document.querySelectorAll(${JSON.stringify(opts.selector)})];
-        if (els.length === 0) throw new Error('选择器没匹配到元素: ' + ${JSON.stringify(opts.selector)});
-        let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
-        for (const el of els) {
-          const r = el.getBoundingClientRect();
-          x1 = Math.min(x1, r.x); y1 = Math.min(y1, r.y + window.scrollY);
-          x2 = Math.max(x2, r.x + r.width); y2 = Math.max(y2, r.y + r.height + window.scrollY);
-        }
-        return { x: x1, y: y1, width: x2 - x1, height: y2 - y1 };
-      })()`);
-    } else {
-      clip = await evalJson(conn, `({ x: 0, y: 0, width: Math.ceil(document.documentElement.scrollWidth), height: Math.ceil(document.documentElement.scrollHeight) })`);
-    }
-    clip = { x: 0, y: Math.max(0, Math.round(clip.y)), width: Math.ceil(clip.width), height: Math.ceil(clip.height), scale: 1 };
-
-    // 逐帧：所有动画整体冻结到 t 再截——确定性输出，重跑同参必得同图
-    const pngs = [];
-    for (let i = 0; i < frames; i++) {
-      const t = Math.round((i * duration) / frames);
-      await evalJson(conn, `document.getAnimations({subtree:true}).forEach(a => { a.pause(); a.currentTime = ${t}; });`);
-      const shot = await conn.send('Page.captureScreenshot', { format: 'png', clip, captureBeyondViewport: true });
-      pngs.push(Buffer.from(shot.data, 'base64'));
-    }
-
-    // 解码全部帧 → 统一调色板 → 索引化 → 编 GIF
-    const decoded = pngs.map(pngToRGB);
-    const w = decoded[0].w, h = decoded[0].h;
-    if (decoded.some((d) => d.w !== w || d.h !== h)) throw new Error('各帧尺寸不一致，动画里别改布局尺寸');
-    const allPixels = Buffer.concat(decoded.map((d) => d.rgb));
-    const palette = buildPalette(allPixels, 256); // GIF 全局色表上限 256 色
-    const gifFrames = decoded.map((d) => ({ w, h, indices: quantize(d.rgb, palette) }));
-    const delayCs = Math.max(2, Math.round(duration / frames / 10));
+    // 多场景：各帧带局部色表；单场景：全局表（沿用旧行为）
+    const totalFrames = gifFrames.length;
+    const delayCs = multi
+      ? Math.max(2, Math.round(100 / fps))
+      : Math.max(2, Math.round(duration0 / frames0 / 10));
     const loop = opts.loop === undefined ? 0 : Number(opts.loop);
-    fs.writeFileSync(out, encodeGif(gifFrames, palette, delayCs, loop));
-    return { out, width: w, height: h, frames, palette: palette.length, delayCs };
+    fs.writeFileSync(out, encodeGif(gifFrames, multi ? null : lastPalette, delayCs, loop));
+    return { out, width: clipSize.w, height: clipSize.h, frames: totalFrames, palette: lastPalette.length, delayCs, scenes: urls.length };
   } finally {
     conn.close();
     await fetch(`http://127.0.0.1:${browser.port}/json/close/${target.id}`).catch(() => {});
@@ -329,35 +379,39 @@ async function main() {
     const i = argv.indexOf(flag);
     return i >= 0 && argv[i + 1] !== undefined ? argv[i + 1] : def;
   };
-  const flagsWithValues = new Set(['-o', '--width', '--scale', '--frames', '--duration', '--selector', '--wait', '--loop']);
-  let input = null;
+  const flagsWithValues = new Set(['-o', '--width', '--scale', '--frames', '--duration', '--selector', '--wait', '--loop', '--fps', '--durations']);
+  const inputs = [];
   for (let i = 0; i < argv.length; i++) {
     if (flagsWithValues.has(argv[i])) { i++; continue; }
     if (argv[i].startsWith('-')) continue;
-    if (!input) input = argv[i];
+    inputs.push(argv[i]);
   }
   const out = get('-o', null);
-  if (!input || !out) {
+  if (!inputs.length || !out) {
     console.error('用法: node gifshot.js <input.html> -o out.gif [--frames 24] [--duration 3000] [--width 512] [--scale 1] [--selector css] [--font] [--loop 0]');
+    console.error('多场景: node gifshot.js s1.html s2.html ... -o out.gif [--fps 10] [--durations 10000,10000,...] [--width 640] [--selector css]');
     process.exit(2);
   }
-  const isUrl = /^https?:\/\//i.test(input);
-  const url = isUrl ? input : pathToFileURL(path.resolve(input)).href;
+  const toUrl = (p) => (/^https?:\/\//i.test(p) ? p : pathToFileURL(path.resolve(p)).href);
+  const durationsArg = get('--durations', null);
 
   const browser = await launchBrowser();
   try {
     const r = await gifshot(browser, {
-      url, out,
+      urls: inputs.map(toUrl), out,
       width: Number(get('--width', 512)),
       scale: Number(get('--scale', 1)),
       frames: Number(get('--frames', 24)),
       duration: Number(get('--duration', 3000)),
+      fps: Number(get('--fps', 10)),
+      durations: durationsArg === null ? null : durationsArg.split(',').map(Number),
       selector: get('--selector', null),
       extraWait: Number(get('--wait', 0)),
       loop: get('--loop', 0),
       fontCss: argv.includes('--font') ? FONT_CSS : null,
     });
-    console.log(`OK ${r.out} (${r.width}x${r.height}, ${r.frames} 帧, ${r.palette} 色, ${r.delayCs}cs/帧)`);
+    const scenes = r.scenes > 1 ? `, ${r.scenes} 场景` : '';
+    console.log(`OK ${r.out} (${r.width}x${r.height}, ${r.frames} 帧${scenes}, ${r.palette} 色, ${r.delayCs}cs/帧)`);
   } finally {
     browser.close();
   }

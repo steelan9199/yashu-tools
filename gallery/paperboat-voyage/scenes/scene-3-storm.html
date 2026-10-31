@@ -1,0 +1,36 @@
+<!doctype html>
+<!-- 第三幕 风浪：天色转深，浪涌加大，船身前倾颠簸，斜雨掠过 -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="artkit.css">
+<style>
+body{margin:0}
+.storm{background:linear-gradient(165deg,#081226 0%,#101f3f 52%,#1a2c55 100%) !important}
+.rain{position:absolute;left:0;top:0;width:640px;height:360px;pointer-events:none;
+  background:repeating-linear-gradient(115deg,transparent 0 26px,rgba(242,233,216,.14) 26px 28px);
+  animation:rn 1s linear infinite}
+@keyframes rn{from{background-position:0 0}to{background-position:-120px 480px}}
+.heave1{animation:hv 1.25s ease-in-out infinite alternate}
+.heave2{animation:hv 1.25s ease-in-out infinite alternate;animation-delay:-.6s}
+.heave3{animation:hv 1.25s ease-in-out infinite alternate;animation-delay:-.3s}
+@keyframes hv{from{margin-top:7px}to{margin-top:-9px}}
+.tilt{animation:tt 2.5s ease-in-out infinite alternate;transform-origin:center bottom}
+@keyframes tt{from{transform:translateX(0) translateY(4px) rotate(-9deg) scale(1.3)}
+              to{transform:translateX(60px) translateY(-6px) rotate(7deg) scale(1.3)}}
+.glow{animation:gl .9s ease-in-out infinite alternate}
+@keyframes gl{from{opacity:.3}to{opacity:.95}}
+.tk{opacity:.4;animation:tw 3s ease-in-out infinite alternate}
+@keyframes tw{from{opacity:.15}to{opacity:.55}}
+</style></head>
+<body>
+<div id="stage" class="yk-sky storm" style="width:640px;height:360px">
+  <div class="yk-star tk" style="left:150px;top:70px"></div>
+  <div class="yk-star tk" style="left:500px;top:50px;animation-delay:-1.4s"></div>
+  <div class="yk-moon" style="right:70px;top:30px;--yk-moon-size:64px;opacity:.6"></div>
+  <div class="tilt" style="position:absolute;left:200px;bottom:66px">
+    <div class="yk-boat"><i class="glow"></i><i></i><i></i><i></i><i></i></div>
+  </div>
+  <div class="yk-sea yk-sea--1 heave1" style="left:-130px;right:-130px;bottom:-58px;height:180px;transform:rotate(2.6deg)"></div>
+  <div class="yk-sea yk-sea--2 heave2" style="left:-130px;right:-130px;bottom:-86px;height:195px;transform:rotate(-2.2deg)"></div>
+  <div class="yk-sea yk-sea--3 heave3" style="left:-130px;right:-130px;bottom:-112px;height:210px;transform:rotate(1.6deg)"></div>
+  <div class="rain"></div>
+</div>
+</body></html>

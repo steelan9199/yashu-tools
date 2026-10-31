@@ -148,5 +148,24 @@ else
   echo "OK 无动画页面被拦下（退出码 1）"
 fi
 
+echo "== gifshot 多场景 =="
+# 正向：两个动画页合成一条 GIF（局部色表硬切），结构断言同上
+mkbox() { printf '<!doctype html><meta charset="utf-8"><style>body{margin:0}#box{width:80px;height:80px;background:%s;position:relative;overflow:hidden}#ball{position:absolute;left:10px;top:28px;width:16px;height:16px;border-radius:50%%;background:%s;animation:mv 0.5s ease-in-out infinite alternate}@keyframes mv{from{transform:translateX(0)}to{transform:translateX(40px)}}</style><div id="box"><div id="ball"></div></div>\n' "$1" "$2"; }
+mkbox '#0b1e3f' '#e8b64c' > "$GDIR/multi-a.html"
+mkbox '#15264d' '#f2e9d8' > "$GDIR/multi-b.html"
+node "$DIR/gifshot.js" "$GDIR/multi-a.html" "$GDIR/multi-b.html" -o "$GDIR/multi.gif" --fps 5 --durations 1000 --selector "#box" || fail=1
+if [ -s "$GDIR/multi.gif" ] && [ "$(head -c 6 "$GDIR/multi.gif")" = "GIF89a" ] && [ "$(tail -c 1 "$GDIR/multi.gif" | od -An -tu1 | tr -d ' ')" = "59" ]; then
+  echo "OK 多场景产物结构齐（两场景一条 GIF）"
+else
+  echo "FAIL 多场景产物缺失或结构不对"; fail=1
+fi
+# 负向：两场景画幅不一致必须拦下（退出码 1）
+printf '<!doctype html><meta charset="utf-8"><style>body{margin:0}#box{width:100px;height:80px;background:#0b1e3f;position:relative}#ball{position:absolute;left:10px;top:28px;width:16px;height:16px;border-radius:50%%;background:#e8b64c;animation:mv 0.5s ease-in-out infinite alternate}@keyframes mv{from{transform:translateX(0)}to{transform:translateX(40px)}}</style><div id="box"><div id="ball"></div></div>\n' > "$GDIR/multi-c.html"
+if node "$DIR/gifshot.js" "$GDIR/multi-a.html" "$GDIR/multi-c.html" -o "$GDIR/multi-bad.gif" --fps 5 --durations 1000 --selector "#box" >/dev/null 2>&1; then
+  echo "FAIL 多场景没拦下画幅不一致"; fail=1
+else
+  echo "OK 画幅不一致被拦下（退出码 1）"
+fi
+
 if [ "$fail" -eq 0 ]; then echo "== PASS 全部回归通过 =="; else echo "== FAIL 有回归未过 =="; fi
 exit "$fail"

@@ -1,0 +1,51 @@
+<!doctype html>
+<!-- 第五幕 见岸：文件夹灯塔出现，塔顶灯扫射，纸船向它靠近 -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="artkit.css">
+<style>
+body{margin:0}
+.lh{position:absolute;right:74px;bottom:118px;width:60px;height:150px}
+.lh .tower{position:absolute;left:7px;bottom:0;width:46px;height:128px;
+  clip-path:polygon(22% 0,78% 0,100% 100%,0 100%);
+  background:repeating-linear-gradient(180deg,#0e1f3d 0 18px,#f2e9d8 18px 34px)}
+.lh .room{position:absolute;left:14px;bottom:124px;width:32px;height:20px;background:#0e1f3d;border-radius:4px 4px 0 0}
+.lh .lamp{position:absolute;left:20px;bottom:140px;width:20px;height:14px;background:#ffd97a;border-radius:3px;
+  box-shadow:0 0 18px 6px rgba(255,217,122,.4);animation:lp 2.5s ease-in-out infinite alternate}
+@keyframes lp{from{opacity:.6}to{opacity:1}}
+.beam{position:absolute;right:96px;bottom:226px;width:210px;height:26px;
+  transform-origin:left center;
+  background:linear-gradient(90deg,rgba(255,217,122,.45),rgba(255,217,122,0));
+  clip-path:polygon(0 42%,100% 0,100% 100%,0 58%);
+  animation:bm 3.5s ease-in-out infinite alternate}
+@keyframes bm{from{transform:rotate(-14deg)}to{transform:rotate(14deg)}}
+.isle{position:absolute;right:0;bottom:60px;width:300px;height:140px;background:#15294e;border-radius:60% 40% 0 0}
+.sway1{animation:sw 5s ease-in-out infinite alternate}
+.sway2{animation:sw 6.25s ease-in-out infinite alternate;animation-delay:-2s}
+@keyframes sw{from{margin-left:-8px}to{margin-left:8px}}
+.approach{animation:ap 10s linear infinite;transform-origin:center bottom}
+@keyframes ap{from{transform:translateX(0) scale(1.3)}to{transform:translateX(230px) scale(1.3)}}
+.bob{animation:bb 2.5s ease-in-out infinite alternate}
+@keyframes bb{from{transform:translateY(0) rotate(-2deg)}to{transform:translateY(-6px) rotate(2deg)}}
+.glow{animation:gl 1.6667s ease-in-out infinite alternate}
+@keyframes gl{from{opacity:.5}to{opacity:1}}
+.tk{opacity:.7;animation:tw 3.3333s ease-in-out infinite alternate}
+@keyframes tw{from{opacity:.3}to{opacity:.8}}
+</style></head>
+<body>
+<div id="stage" class="yk-sky" style="width:640px;height:360px">
+  <div class="yk-star tk" style="left:140px;top:60px"></div>
+  <div class="yk-star tk" style="left:300px;top:90px;animation-delay:-1s"></div>
+  <div class="yk-star tk" style="left:430px;top:44px;animation-delay:-2s"></div>
+  <div class="yk-star tk" style="left:560px;top:120px;animation-delay:-.6s"></div>
+  <div class="yk-moon" style="left:56px;top:36px;--yk-moon-size:80px;opacity:.8"></div>
+  <div class="isle"></div>
+  <div class="lh"><div class="tower"></div><div class="room"></div><div class="lamp"></div></div>
+  <div class="beam"></div>
+  <div class="yk-folder" style="right:150px;bottom:118px;transform:scale(.62);transform-origin:bottom right"></div>
+  <div class="approach" style="position:absolute;left:120px;bottom:66px">
+    <div class="yk-boat bob"><i class="glow"></i><i></i><i></i><i></i><i></i></div>
+  </div>
+  <div class="yk-sea yk-sea--1 sway1" style="bottom:-60px;height:168px;transform:rotate(1.6deg)"></div>
+  <div class="yk-sea yk-sea--2 sway2" style="bottom:-86px;height:184px;transform:rotate(-1.4deg)"></div>
+  <div class="yk-sea yk-sea--3" style="bottom:-112px;height:198px;transform:rotate(.9deg)"></div>
+</div>
+</body></html>

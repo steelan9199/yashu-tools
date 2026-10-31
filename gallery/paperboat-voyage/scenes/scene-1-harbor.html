@@ -1,0 +1,36 @@
+<!doctype html>
+<!-- 第一幕 出港：文件夹海港，提灯人点亮灯笼，纸船缓缓离岸向右 -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="artkit.css">
+<style>
+body{margin:0}
+.tk{opacity:.7;animation:tw 2.5s ease-in-out infinite alternate}
+.tk--d{animation-duration:4s;animation-delay:-1.5s}
+@keyframes tw{from{opacity:.25}to{opacity:.85}}
+.sway1{animation:sw 5s ease-in-out infinite alternate}
+.sway2{animation:sw 6.25s ease-in-out infinite alternate;animation-delay:-2s}
+.sway3{animation:sw 5s ease-in-out infinite alternate;animation-delay:-3.5s}
+@keyframes sw{from{margin-left:-9px}to{margin-left:9px}}
+.sail{animation:go 10s linear infinite;transform-origin:center bottom}
+@keyframes go{from{transform:translateX(0) scale(1.3)}to{transform:translateX(150px) scale(1.3)}}
+.bob{animation:bb 2.5s ease-in-out infinite alternate}
+@keyframes bb{from{transform:translateY(0) rotate(-2deg)}to{transform:translateY(-6px) rotate(2deg)}}
+.glow{animation:gl 1.25s ease-in-out infinite alternate}
+@keyframes gl{from{opacity:.45}to{opacity:1}}
+</style></head>
+<body>
+<div id="stage" class="yk-sky" style="width:640px;height:360px">
+  <div class="yk-star tk" style="left:180px;top:50px"></div>
+  <div class="yk-star tk tk--d" style="left:330px;top:90px"></div>
+  <div class="yk-star tk" style="left:470px;top:44px;animation-delay:-1s"></div>
+  <div class="yk-star tk tk--d" style="left:560px;top:130px"></div>
+  <div class="yk-star tk" style="left:250px;top:150px;animation-delay:-2s"></div>
+  <div class="yk-moon" style="left:64px;top:38px;--yk-moon-size:88px"></div>
+  <div class="sail" style="position:absolute;left:230px;bottom:64px">
+    <div class="yk-boat bob"><i class="glow"></i><i></i><i></i><i></i><i></i></div>
+  </div>
+  <div class="yk-sea yk-sea--1 sway1" style="bottom:-60px;height:170px;transform:rotate(1.5deg)"></div>
+  <div class="yk-sea yk-sea--2 sway2" style="bottom:-85px;height:185px;transform:rotate(-1.2deg)"></div>
+  <div class="yk-sea yk-sea--3 sway3" style="bottom:-110px;height:200px;transform:rotate(.8deg)"></div>
+  <div class="yk-folder" style="left:20px;bottom:92px;transform:scale(.8);transform-origin:bottom left"></div>
+</div>
+</body></html>
